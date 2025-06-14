@@ -621,11 +621,11 @@ async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     try:
-        user_id = int(context.args[0])
-        reply_message = ' '.join(context.args[1:])
-        
-        reply_text = f"""
- **📞 PhantomLine Support Response**
+    user_id = int(context.args[0])
+    reply_message = ' '.join(context.args[1:])
+    
+    reply_text = "📞 PhantomLine Support Response:\n" + reply_message
+    await context.bot.send_message(chat_id=user_id, text=reply_text)
 
 💬 **Admin Reply:**
 {reply_message}
