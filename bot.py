@@ -625,7 +625,7 @@ async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_message = ' '.join(context.args[1:])
         
         reply_text = f"""
-📞 **PhantomLine Support Response**
+ **📞 PhantomLine Support Response**
 
 💬 **Admin Reply:**
 {reply_message}
