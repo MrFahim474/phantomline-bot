@@ -21,9 +21,9 @@ ADMIN_ID = int(os.environ.get('ADMIN_ID', '123456789'))
 
 # Your popunder ad links (replace with your actual links)
 POPUNDER_ADS = [
-    "https://www.profitableratecpm.com/vyae9242?key=b7f39ee343b0a72625176c5f79bcd81b}",  # Replace with your ad link
-    "https://www.profitableratecpm.com/wwur9vddps?key=6ac9c3ed993ad2a89a11603f8c27d528}",  # Replace with your ad link
-    "https://www.profitableratecpm.com/p6rgdh07x?key=b2db689973484840de005ee95612c9f9}"  # Replace with your ad link
+    "https://www.profitableratecpm.com/vyae9242?key=b7f39ee343b0a72625176c5f79bcd81b&subid={user_id}",
+    "https://www.profitableratecpm.com/wwur9vddps?key=6ac9c3ed993ad2a89a11603f8c27d528&subid={user_id}",
+    "https://www.profitableratecpm.com/p6rgdh07x?key=b2db689973484840de005ee95612c9f9&subid={user_id}"
 ]
 
 # Database setup with better structure
