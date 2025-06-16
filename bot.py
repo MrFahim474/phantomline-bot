@@ -1231,7 +1231,9 @@ try:
 • `/broadcast <message>` - Send to all users
 • `/stats` - View user stats
         """
-                try:
+                # Admin stats command
+async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
         keyboard = [
             [InlineKeyboardButton("🔄 Refresh", callback_data="admin_refresh")],
             [InlineKeyboardButton("📝 View Tickets", callback_data="admin_tickets")]
