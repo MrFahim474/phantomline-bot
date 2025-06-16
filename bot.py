@@ -1231,23 +1231,24 @@ try:
 • `/broadcast <message>` - Send to all users
 • `/stats` - View user stats
         """
-    keyboard = [
-            [InlineKeyboardButton("🔄 Refresh", callback_data="admin_refresh")],
-            [InlineKeyboardButton("📝 View Tickets", callback_data="admin_tickets")]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await update.message.reply_text(admin_text, reply_markup=reply_markup, parse_mode='Markdown')
-        
-    except Exception as e:
-        logger.error(f"Error in admin_stats: {e}")
-        await update.message.reply_text(f"❌ Error loading admin stats: {str(e)}")
+        keyboard = [
+        [InlineKeyboardButton("🔄 Refresh", callback_data="admin_refresh")],
+        [InlineKeyboardButton("📝 View Tickets", callback_data="admin_tickets")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text(admin_text, reply_markup=reply_markup, parse_mode='Markdown')
+
+except Exception as e:
+    logger.error(f"Error in admin_stats: {e}")
+    await update.message.reply_text(f"❌ Error loading admin stats: {str(e)}")
+
 
 # Broadcast command for admin
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
-    
+
     if not context.args:
         await update.message.reply_text(
             "**Broadcast Format:**\n"
@@ -1257,7 +1258,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-message = ' '.join(context.args)
+    message = ' '.join(context.args)
     
     # Get all users
     conn = sqlite3.connect('phantomline.db')
