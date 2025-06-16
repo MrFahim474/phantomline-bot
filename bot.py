@@ -1231,7 +1231,7 @@ try:
 • `/broadcast <message>` - Send to all users
 • `/stats` - View user stats
         """
-            try:
+                try:
         keyboard = [
             [InlineKeyboardButton("🔄 Refresh", callback_data="admin_refresh")],
             [InlineKeyboardButton("📝 View Tickets", callback_data="admin_tickets")]
@@ -1243,7 +1243,6 @@ try:
     except Exception as e:
         logger.error(f"Error in admin_stats: {e}")
         await update.message.reply_text(f"❌ Error loading admin stats: {str(e)}")
-
 
 # Broadcast command for admin
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
