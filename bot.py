@@ -1234,6 +1234,8 @@ try:
                 # Admin stats command
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
+        admin_text = "**👮 Admin Panel**\nUse the buttons below to manage the bot."
+
         keyboard = [
             [InlineKeyboardButton("🔄 Refresh", callback_data="admin_refresh")],
             [InlineKeyboardButton("📝 View Tickets", callback_data="admin_tickets")]
