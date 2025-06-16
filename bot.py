@@ -22,11 +22,7 @@ ADMIN_ID = int(os.environ.get('ADMIN_ID', '123456789'))
 # Your popunder ad links (replace with your actual links)
 
 
-import random
-import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-
-bot = telebot.TeleBot("YOUR_BOT_TOKEN")  # Replace with your bot token
+bot = telebot.TeleBot(BOT_TOKEN)
 
 # Step 1: Adsterra Direct Links with tracking
 POPUNDER_ADS = [
@@ -65,9 +61,11 @@ def after_ad_redirect(call):
         reply_markup=markup
     )
 
+# Initialize database
+init_db()
+
 # Run the bot
 bot.polling()
-
 
 
 
