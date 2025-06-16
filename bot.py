@@ -1231,7 +1231,7 @@ try:
 • `/broadcast <message>` - Send to all users
 • `/stats` - View user stats
         """
-                # Admin stats command
+            # Admin stats command
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         admin_text = "**👮 Admin Panel**\nUse the buttons below to manage the bot."
@@ -1308,7 +1308,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📤 **Sent:** {sent_count}\n"
         f"❌ **Failed:** {failed_count}\n"
         f"📊 **Success Rate:** {(sent_count/(sent_count+failed_count)*100):.1f}%"
-)
+    )
 
 # Error handler
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -1356,7 +1356,6 @@ def main():
     application = Application.builder().token(BOT_TOKEN).build()
     
     # Add command handlers
-
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("countries", countries_command))
     application.add_handler(CommandHandler("help", help_command))
@@ -1389,3 +1388,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    
