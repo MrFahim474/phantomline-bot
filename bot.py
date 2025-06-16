@@ -20,11 +20,56 @@ BOT_TOKEN = os.environ.get('BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE')
 ADMIN_ID = int(os.environ.get('ADMIN_ID', '123456789'))
 
 # Your popunder ad links (replace with your actual links)
+
+
+import random
+import telebot
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+bot = telebot.TeleBot("YOUR_BOT_TOKEN")  # Replace with your bot token
+
+# Step 1: Adsterra Direct Links with tracking
 POPUNDER_ADS = [
-    "https://syndication.realsrv.com/splash.php?idzone=YOUR_ZONE_ID&var={user_id}",
-    "https://www.profitablecpmrate.com/YOUR_CAMPAIGN_ID?subid={user_id}",
-    "https://ads.adsterra.com/click/YOUR_CLICK_ID?subid={user_id}"
+    "https://www.profitableratecpm.com/vyae9242?key=b7f39ee343b0a72625176c5f79bcd81b&subid={user_id}",
+    "https://www.profitableratecpm.com/wwur9vddps?key=6ac9c3ed993ad2a89a11603f8c27d528&subid={user_id}",
+    "https://www.profitableratecpm.com/p6rgdh07x?key=b2db689973484840de005ee95612c9f9&subid={user_id}"
 ]
+
+# Step 2: User clicks start → gets Ad link first
+@bot.message_handler(commands=['start'])
+def send_ad_first(message):
+    user_id = message.from_user.id
+    ad_link = random.choice(POPUNDER_ADS).format(user_id=user_id)
+
+    markup = InlineKeyboardMarkup()
+    markup.add(
+        InlineKeyboardButton("🚀 Click here first (Ad)", url=ad_link),
+        InlineKeyboardButton("✅ I’ve Seen Ad! Continue", callback_data="continue_after_ad")
+    )
+
+    bot.send_message(message.chat.id, "Please click the first button and view the ad. After that, click 'Continue'.", reply_markup=markup)
+
+# Step 3: After ad → send real action
+@bot.callback_query_handler(func=lambda call: call.data == "continue_after_ad")
+def after_ad_redirect(call):
+    user_id = call.from_user.id
+    real_destination_link = "https://t.me/PhantomLine_Bot?start=verified"
+
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("📲 Go to Bot Feature", url=real_destination_link))
+
+    bot.edit_message_text(
+        chat_id=call.message.chat.id,
+        message_id=call.message.message_id,
+        text="✅ Thanks! Now continue to the main bot feature:",
+        reply_markup=markup
+    )
+
+# Run the bot
+bot.polling()
+
+
+
 
 # Database setup with better structure
 def init_db():
