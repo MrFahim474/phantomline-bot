@@ -21,7 +21,6 @@ ADMIN_ID = int(os.environ.get('ADMIN_ID', '123456789'))
 
 # Your popunder ad links (replace with your actual links)
 
-
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Step 1: Adsterra Direct Links with tracking
@@ -66,8 +65,6 @@ init_db()
 
 # Run the bot
 bot.polling()
-
-
 
 # Database setup with better structure
 def init_db():
@@ -1126,7 +1123,7 @@ This helps us keep providing free real phone numbers! 🙏
         await query.edit_message_text(ad_text, reply_markup=reply_markup, parse_mode='Markdown')
         return
     
-    # Remove ad prefix if present
+        # Remove ad prefix if present
     if data.startswith('ad_'):
         data = data[3:]
     
@@ -1147,8 +1144,7 @@ This helps us keep providing free real phone numbers! 🙏
         await report_help(query)
     elif data.startswith("country_"):
         country = data.split("_", 1)[1]
-
-await show_country_numbers(query, country)
+        await show_country_numbers(query, country)
     elif data.startswith("number_"):
         parts = data.split("_")
         country = parts[1]
@@ -1388,4 +1384,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-        
