@@ -1,17 +1,15 @@
 import os
 import logging
+import sqlite3
+import asyncio
 import random
+import requests
+import re
+from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    CallbackQueryHandler,
-    ContextTypes,
-)
-from dotenv import load_dotenv
-
-# Optional: Load environment variables from a .env file
-load_dotenv()
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
+import json
+from urllib.parse import quote
 
 # Configure logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -21,27 +19,30 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = os.environ.get('BOT_TOKEN', '7595651829:AAHK9wTuG3xBfcIQWbXGUJbW-Wjfe1AlTAM')
 ADMIN_ID = int(os.environ.get('ADMIN_ID', '5593343692'))
 
-# Step 1: Adsterra Direct Links with tracking
+# Your popunder ad links (replace with your actual links)
 POPUNDER_ADS = [
     "https://www.profitableratecpm.com/vyae9242?key=b7f39ee343b0a72625176c5f79bcd81b&subid={user_id}",
     "https://www.profitableratecpm.com/wwur9vddps?key=6ac9c3ed993ad2a89a11603f8c27d528&subid={user_id}",
     "https://www.profitableratecpm.com/p6rgdh07x?key=b2db689973484840de005ee95612c9f9&subid={user_id}"
 ]
 
+# 🚨 Only this part is changed: telebot → python-telegram-bot handler
+from telegram.ext import ApplicationBuilder
+from telegram.ext import CommandHandler, CallbackQueryHandler
+
 # Step 2: User clicks start → gets Ad link first
 async def send_ad_first(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     ad_link = random.choice(POPUNDER_ADS).format(user_id=user_id)
 
-    keyboard = [
+    markup = InlineKeyboardMarkup([
         [InlineKeyboardButton("🚀 Click here first (Ad)", url=ad_link)],
         [InlineKeyboardButton("✅ I’ve Seen Ad! Continue", callback_data="continue_after_ad")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    ])
 
     await update.message.reply_text(
         "Please click the first button and view the ad. After that, click 'Continue'.",
-        reply_markup=reply_markup
+        reply_markup=markup
     )
 
 # Step 3: After ad → send real action
@@ -49,24 +50,26 @@ async def after_ad_redirect(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
+    user_id = query.from_user.id
     real_destination_link = "https://t.me/PhantomLine_Bot?start=verified"
-    reply_markup = InlineKeyboardMarkup([
+
+    markup = InlineKeyboardMarkup([
         [InlineKeyboardButton("📲 Go to Bot Feature", url=real_destination_link)]
     ])
 
     await query.edit_message_text(
         text="✅ Thanks! Now continue to the main bot feature:",
-        reply_markup=reply_markup
+        reply_markup=markup
     )
 
-# Step 4: Run the bot
+# Step 4: Run the bot (just replace polling)
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
+    application = Application.builder().token(BOT_TOKEN).build()
 
-    app.add_handler(CommandHandler("start", send_ad_first))
-    app.add_handler(CallbackQueryHandler(after_ad_redirect, pattern="^continue_after_ad$"))
+    application.add_handler(CommandHandler("start", send_ad_first))
+    application.add_handler(CallbackQueryHandler(after_ad_redirect, pattern="^continue_after_ad$"))
 
-    app.run_polling()
+    application.run_polling()
 
 # Database setup with better structure
 def init_db():
