@@ -20,51 +20,11 @@ BOT_TOKEN = os.environ.get('BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE')
 ADMIN_ID = int(os.environ.get('ADMIN_ID', '123456789'))
 
 # Your popunder ad links (replace with your actual links)
-
-bot = telebot.TeleBot(BOT_TOKEN)
-
-# Step 1: Adsterra Direct Links with tracking
 POPUNDER_ADS = [
-    "https://www.profitableratecpm.com/vyae9242?key=b7f39ee343b0a72625176c5f79bcd81b&subid={user_id}",
-    "https://www.profitableratecpm.com/wwur9vddps?key=6ac9c3ed993ad2a89a11603f8c27d528&subid={user_id}",
-    "https://www.profitableratecpm.com/p6rgdh07x?key=b2db689973484840de005ee95612c9f9&subid={user_id}"
+    "https://syndication.realsrv.com/splash.php?idzone=YOUR_ZONE_ID&var={user_id}",  # Replace with your ad link
+    "https://www.profitablecpmrate.com/YOUR_CAMPAIGN_ID?subid={user_id}",  # Replace with your ad link
+    "https://ads.adsterra.com/click/YOUR_CLICK_ID?subid={user_id}"  # Replace with your ad link
 ]
-
-# Step 2: User clicks start → gets Ad link first
-@bot.message_handler(commands=['start'])
-def send_ad_first(message):
-    user_id = message.from_user.id
-    ad_link = random.choice(POPUNDER_ADS).format(user_id=user_id)
-
-    markup = InlineKeyboardMarkup()
-    markup.add(
-        InlineKeyboardButton("🚀 Click here first (Ad)", url=ad_link),
-        InlineKeyboardButton("✅ I’ve Seen Ad! Continue", callback_data="continue_after_ad")
-    )
-
-    bot.send_message(message.chat.id, "Please click the first button and view the ad. After that, click 'Continue'.", reply_markup=markup)
-
-# Step 3: After ad → send real action
-@bot.callback_query_handler(func=lambda call: call.data == "continue_after_ad")
-def after_ad_redirect(call):
-    user_id = call.from_user.id
-    real_destination_link = "https://t.me/PhantomLine_Bot?start=verified"
-
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("📲 Go to Bot Feature", url=real_destination_link))
-
-    bot.edit_message_text(
-        chat_id=call.message.chat.id,
-        message_id=call.message.message_id,
-        text="✅ Thanks! Now continue to the main bot feature:",
-        reply_markup=markup
-    )
-
-# Initialize database
-init_db()
-
-# Run the bot
-bot.polling()
 
 # Database setup with better structure
 def init_db():
@@ -695,7 +655,6 @@ async def bot_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • **Today's Requests:** {requests_24h:,} numbers
 • **Success Rate:** {success_rate:.1f}% verified
 • **Ad Interactions:** {total_ad_clicks:,} clicks
-
 🌍 **Service Statistics:**
 • **Countries Available:** {total_countries} regions
 • **Active Numbers:** {total_numbers} real numbers
@@ -932,7 +891,6 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • **Ticket ID:** #{ticket_id}
 
 📝 **Issue Reported:**
-
 🕐 **Time:** {timestamp.strftime('%Y-%m-%d %H:%M:%S')} UTC
 
 **Quick Actions:**
@@ -964,8 +922,8 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🎫 **Your Ticket:** #{ticket_id}
 
 📝 **Your Message:**
-
-    ⏰ **What happens next:**
+    
+⏰ **What happens next:**
 • Our team will review your issue
 • You'll receive a direct response within 2-4 hours
 • We'll message you directly in this chat
@@ -1103,7 +1061,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ad_text = f"""
 🎯 **Quick Ad - Keeps PhantomLine FREE!**
 
-        PhantomLine is 100% free thanks to our sponsors! 
+PhantomLine is 100% free thanks to our sponsors! 
 
 **To continue to your content:**
 
@@ -1123,7 +1081,7 @@ This helps us keep providing free real phone numbers! 🙏
         await query.edit_message_text(ad_text, reply_markup=reply_markup, parse_mode='Markdown')
         return
     
-        # Remove ad prefix if present
+    # Remove ad prefix if present
     if data.startswith('ad_'):
         data = data[3:]
     
@@ -1164,8 +1122,8 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         await update.message.reply_text("❌ Unauthorized access.")
         return
-
-try:
+    
+    try:
         conn = sqlite3.connect('phantomline.db')
         cursor = conn.cursor()
         
@@ -1190,8 +1148,8 @@ try:
         
         cursor.execute('SELECT COUNT(*) FROM number_usage WHERE timestamp > datetime("now", "-24 hours")')
         requests_24h = cursor.fetchone()[0]
-
-# Revenue estimation
+        
+        # Revenue estimation
         estimated_revenue = total_ad_clicks * 0.002  # $0.002 per click average
         
         conn.close()
@@ -1231,19 +1189,15 @@ try:
 • `/broadcast <message>` - Send to all users
 • `/stats` - View user stats
         """
-            # Admin stats command
-async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        admin_text = "**👮 Admin Panel**\nUse the buttons below to manage the bot."
-
+        
         keyboard = [
             [InlineKeyboardButton("🔄 Refresh", callback_data="admin_refresh")],
             [InlineKeyboardButton("📝 View Tickets", callback_data="admin_tickets")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-
+        
         await update.message.reply_text(admin_text, reply_markup=reply_markup, parse_mode='Markdown')
-
+        
     except Exception as e:
         logger.error(f"Error in admin_stats: {e}")
         await update.message.reply_text(f"❌ Error loading admin stats: {str(e)}")
@@ -1252,7 +1206,7 @@ async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         return
-
+    
     if not context.args:
         await update.message.reply_text(
             "**Broadcast Format:**\n"
@@ -1261,7 +1215,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode='Markdown'
         )
         return
-
+    
     message = ' '.join(context.args)
     
     # Get all users
@@ -1388,4 +1342,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
