@@ -88,344 +88,117 @@ def init_db():
     conn.close()
 
 # Real SMS API integration
+
 class RealPhoneAPI:
     def __init__(self):
-        # Real working phone numbers from actual free SMS services
+        self.base_url = "https://receive-sms-online.info"
+        self.session = requests.Session()
+        self.session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9"
+        })
+        
+        # Pre-validated countries/numbers (update monthly)
         self.real_numbers = {
-            'USA 🇺🇸': [
-                {'number': '+12092512708', 'api': 'receivesms.org', 'active': True},
-                {'number': '+17753055499', 'api': 'receivesms.org', 'active': True},
-                {'number': '+15597418334', 'api': 'receivesms.org', 'active': True}
-            ],
-            'UK 🇬🇧': [
-                {'number': '+447700150616', 'api': 'receivesms.org', 'active': True},
-                {'number': '+447700150655', 'api': 'receivesms.org', 'active': True}
-            ],
-            'Germany 🇩🇪': [
-                {'number': '+4915735983768', 'api': 'receivesms.org', 'active': True},
-                {'number': '+4915735998460', 'api': 'receivesms.org', 'active': True}
-            ],
-            'Canada 🇨🇦': [
-                {'number': '+15879846325', 'api': 'receivesms.org', 'active': True},
-                {'number': '+16138006493', 'api': 'receivesms.org', 'active': True}
-            ],
-            'France 🇫🇷': [
-                {'number': '+33757592041', 'api': 'receivesms.org', 'active': True}
-            ],
-            'Netherlands 🇳🇱': [
-                {'number': '+31683734022', 'api': 'receivesms.org', 'active': True}
-            ],
-            'Spain 🇪🇸': [
-                {'number': '+34613280889', 'api': 'receivesms.org', 'active': True}
-            ],
-            'Italy 🇮🇹': [
-                {'number': '+393202838889', 'api': 'receivesms.org', 'active': True}
-            ]
+            "USA 🇺🇸": ["+12092512708", "+17753055499", "+15597418334"],
+            "UK 🇬🇧": ["+447700150616", "+447520635472"],
+            "Germany 🇩🇪": ["+4915735983768", "+4915202806842"]
         }
-    
+
     def get_countries(self):
         return list(self.real_numbers.keys())
-    
+
     def get_numbers_by_country(self, country):
-        return self.real_numbers.get(country, [])
-    
+        return [{"number": num, "active": True} for num in self.real_numbers.get(country, [])]
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
     async def fetch_real_sms(self, number):
-        """Fetch real SMS from actual free SMS services"""
+        clean_number = number.replace("+", "")
+        url = f"{self.base_url}/number/{clean_number}/"
+        
         try:
-            # Remove formatting from number
-            clean_number = number.replace('+', '')
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "lxml")
             
-            # Try to fetch from receivesms.org
-            url = f"https://receivesms.org/api/sms/{clean_number}/"
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-            
-            response = requests.get(url, headers=headers)
-            
-            if response.status_code == 200:
-                # Try to parse as JSON first
-                try:
-                    data = response.json()
-                    if 'messages' in data and len(data['messages']) > 0:
-                        messages = []
-                        for msg in data['messages']:
-                            # Extract verification code using regex
-                            code_match = re.search(r'(\d{4,8})', msg.get('text', ''))
-                            code = code_match.group(1) if code_match else 'Unknown'
-                            
-                            messages.append({
-                                'service': self._detect_service(msg.get('sender', ''), msg.get('text', '')),
-                                'sender': msg.get('sender', 'Unknown'),
-                                'message': msg.get('text', ''),
-                                'code': code,
-                                'time': msg.get('time', 'Just now'),
-                                'timestamp': datetime.now().isoformat()
-                            })
-                        return messages
-                except:
-                    # If JSON parsing fails, try HTML scraping
-                    pass
-            
-            # Try HTML scraping
-            try:
-                # Extract messages using regex
-                message_blocks = re.findall(r'<div class="message-card">(.*?)</div>', response.text, re.DOTALL)
+            messages = []
+            for msg in soup.select(".sms-item"):
+                sender = msg.select_one(".sender").get_text(strip=True)
+                text = msg.select_one(".text").get_text(strip=True)
+                time = msg.select_one(".time").get_text(strip=True)
                 
-                if message_blocks:
-                    messages = []
-                    for block in message_blocks:
-                        sender_match = re.search(r'<div class="sender">(.*?)</div>', block)
-                        text_match = re.search(r'<div class="message-text">(.*?)</div>', block)
-                        time_match = re.search(r'<div class="time">(.*?)</div>', block)
-                        
-                        if sender_match and text_match:
-                            sender = sender_match.group(1).strip()
-                            text = text_match.group(1).strip()
-                            time_str = time_match.group(1).strip() if time_match else 'Just now'
-                            
-                            # Extract verification code
-                            code_match = re.search(r'(\d{4,8})', text)
-                            code = code_match.group(1) if code_match else 'Unknown'
-                            
-                            messages.append({
-                                'service': self._detect_service(sender, text),
-                                'sender': sender,
-                                'message': text,
-                                'code': code,
-                                'time': time_str,
-                                'timestamp': datetime.now().isoformat()
-                            })
-                    
-                    if messages:
-                        return messages
-            except Exception as e:
-                logger.error(f"Error scraping SMS HTML: {e}")
+                code = re.search(r"\b\d{4,8}\b", text)
+                code = code.group() if code else "No code found"
+                
+                messages.append({
+                    "service": sender,
+                    "code": code,
+                    "message": text,
+                    "time": time
+                })
             
-            # Try another service if first one fails
-            url = f"https://receive-sms-free.cc/sms/{clean_number}/"
-            response = requests.get(url, headers=headers)
-            
-            if response.status_code == 200:
-                # Similar scraping logic
-                # ...
-                pass
-            
-            # If all fails, return empty list
-            return []
-            
+            return messages[:5]
         except Exception as e:
-            logger.error(f"Error fetching SMS: {e}")
+            logger.error(f"SMS fetch failed for {number}: {e}")
             return []
-    
-    def _detect_service(self, sender, message):
-        """Detect which service the message is from based on content"""
-        sender = sender.lower() if sender else ""
-        message = message.lower() if message else ""
-        
-        services = {
-            'WhatsApp': ['whatsapp', 'wa'],
-            'Telegram': ['telegram', 'tg code'],
-            'Google': ['google', 'g-'],
-            'Facebook': ['facebook', 'fb'],
-            'Instagram': ['instagram', 'ig'],
-            'Twitter': ['twitter', 'x code'],
-            'Discord': ['discord'],
-            'TikTok': ['tiktok'],
-            'LinkedIn': ['linkedin'],
-            'Apple': ['apple', 'icloud'],
-            'Microsoft': ['microsoft', 'ms'],
-            'Amazon': ['amazon'],
-            'Netflix': ['netflix'],
-            'Spotify': ['spotify'],
-            'Uber': ['uber'],
-            'PayPal': ['paypal']
-        }
-        
-        for service, keywords in services.items():
-            for keyword in keywords:
-                if keyword in sender or keyword in message:
-                    return service
-        
-        return 'Unknown'
 
 # Real Email API integration
 class RealEmailAPI:
     def __init__(self):
-        # Real temporary email domains
-        self.email_domains = [
-            'tempmail.org',
-            '10minutemail.com',
-            'guerrillamail.com',
-            'mailinator.com',
-            'tempmailo.com',
-            'temp-mail.org',
-            'throwaway.email',
-            'maildrop.cc',
-            'getairmail.com',
-            'yopmail.com'
-        ]
-    
-    def generate_temp_email(self):
-        """Generate a real temporary email"""
-        try:
-            # Try to get from 1secmail API
-            response = requests.get("https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1")
-            if response.status_code == 200:
-                emails = response.json()
-                if emails and len(emails) > 0:
-                    return emails[0]
-        except:
-            pass
-            
-        # Fallback to local generation
-        username = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=10))
-        domain = random.choice(self.email_domains)
-        return f"{username}@{domain}"
-    
-    async def fetch_real_emails(self, email):
-        """Fetch real emails from temporary email services"""
-        try:
-            # Parse email parts
-            username, domain = email.split('@')
-            
-            # For 1secmail domains
-            if domain in ['1secmail.com', '1secmail.org', '1secmail.net']:
-                try:
-                    # Use 1secmail API
-                    response = requests.get(f"https://www.1secmail.com/api/v1/?action=getMessages&login={username}&domain={domain}")
-                    if response.status_code == 200:
-                        data = response.json()
-                        messages = []
-                        
-                        for msg_data in data:
-                            # Get message content
-                            msg_id = msg_data.get('id')
-                            if msg_id:
-                                msg_response = requests.get(f"https://www.1secmail.com/api/v1/?action=readMessage&login={username}&domain={domain}&id={msg_id}")
-                                if msg_response.status_code == 200:
-                                    msg_content = msg_response.json()
-                                    
-                                    # Extract verification code
-                                    body = msg_content.get('body', '')
-                                    code_match = re.search(r'(\d{4,8})', body)
-                                    code = code_match.group(1) if code_match else 'Unknown'
-                                    
-                                    # Calculate time
-                                    timestamp = msg_content.get('date', '')
-                                    time_str = 'Just now'
-                                    
-                                    messages.append({
-                                        'from': msg_content.get('from', ''),
-                                        'subject': msg_content.get('subject', ''),
-                                        'content': body,
-                                        'code': code,
-                                        'service': self._detect_service(msg_content.get('from', ''), msg_content.get('subject', '')),
-                                        'time': time_str,
-                                        'timestamp': timestamp
-                                    })
-                        
-                        if messages:
-                            return messages
-                except Exception as e:
-                    logger.error(f"Error fetching emails from 1secmail: {e}")
-            
-            # If all fails, generate realistic emails
-            return self._generate_realistic_emails(email)
-                
-        except Exception as e:
-            logger.error(f"Error fetching emails: {e}")
-            return self._generate_realistic_emails(email)
-    
-    def _detect_service(self, sender, subject):
-        """Detect which service the email is from"""
-        sender = sender.lower() if sender else ""
-        subject = subject.lower() if subject else ""
-        
-        services = {
-            'Google': ['google', 'gmail'],
-            'Facebook': ['facebook', 'fb'],
-            'Instagram': ['instagram'],
-            'Twitter': ['twitter'],
-            'LinkedIn': ['linkedin'],
-            'Apple': ['apple', 'icloud'],
-            'Microsoft': ['microsoft', 'outlook'],
-            'Amazon': ['amazon'],
-            'Netflix': ['netflix'],
-            'Spotify': ['spotify'],
-            'Discord': ['discord'],
-            'TikTok': ['tiktok']
-        }
-        
-        for service, keywords in services.items():
-            for keyword in keywords:
-                if keyword in sender or keyword in subject:
-                    return service
-        
-        return 'Unknown'
-    
-    def _generate_realistic_emails(self, email):
-        """Generate realistic email messages as fallback"""
-        email_templates = [
-            {
-                'sender': 'noreply@google.com',
-                'subject': 'Verify your Google Account',
-                'content': 'Your verification code is: {code}\n\nEnter this code to verify your account.\n\nIf you didn\'t request this, ignore this email.',
-                'service': 'Google'
-            },
-            {
-                'sender': 'security@facebook.com',
-                'subject': 'Facebook Login Code',
-                'content': 'Your Facebook login code is {code}.\n\nIf you didn\'t try to log in, secure your account.',
-                'service': 'Facebook'
-            },
-            {
-                'sender': 'no-reply@accounts.instagram.com',
-                'subject': 'Instagram Confirmation Code',
-                'content': 'Your Instagram confirmation code is: {code}\n\nThis code will expire in 10 minutes.',
-                'service': 'Instagram'
-            }
-        ]
-        
-        # Generate 1-3 emails
-        num_emails = random.randint(1, 3)
-        selected_templates = random.sample(email_templates, min(num_emails, len(email_templates)))
-        
-        emails = []
-        for template in selected_templates:
-            # Generate verification code
-            code = f"{random.randint(100000, 999999)}"
-            
-            # Create email content
-            content = template['content'].format(code=code)
-            
-            # Random timing
-            minutes_ago = random.randint(1, 30)
-            timestamp = datetime.now() - timedelta(minutes=minutes_ago)
-            
-            if minutes_ago == 1:
-                time_str = "1 min ago"
-            elif minutes_ago < 60:
-                time_str = f"{minutes_ago} min ago"
-            else:
-                hours = minutes_ago // 60
-                mins = minutes_ago % 60
-                time_str = f"{hours}h {mins}m ago"
-            
-            emails.append({
-                'from': template['sender'],
-                'subject': template['subject'],
-                'content': content,
-                'code': code,
-                'service': template['service'],
-                'time': time_str,
-                'timestamp': timestamp.isoformat()
-            })
-        
-        # Sort by timestamp (newest first)
-        emails.sort(key=lambda x: x['timestamp'], reverse=True)
-        return emails
+        self.api_url = "https://10minutemail.com/address/api"
+        self.session = requests.Session()
+        self.session.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            "Content-Type": "application/json"
+        })
+        self.email = None
+        self.token = None
 
+    def generate_temp_email(self):
+        try:
+            response = self.session.post(
+                f"{self.api_url}/getAddress",
+                json={},
+                timeout=10
+            )
+            data = response.json()
+            self.email = data["address"]
+            self.token = data["token"]
+            return self.email
+        except Exception as e:
+            logger.error(f"Email generation failed: {e}")
+            return "error@tempmail.fail"
+
+    @retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
+    async def fetch_real_emails(self, email):
+        if not self.token:
+            return []
+            
+        try:
+            response = self.session.post(
+                f"{self.api_url}/getMessages",
+                json={"token": self.token},
+                timeout=10
+            )
+            data = response.json()
+            
+            emails = []
+            for msg in data.get("messages", []):
+                code = re.search(r"\b\d{4,8}\b", msg.get("textBody", ""))
+                code = code.group() if code else "No code found"
+                
+                emails.append({
+                    "from": msg.get("from", "Unknown"),
+                    "subject": msg.get("subject", "No subject"),
+                    "code": code,
+                    "content": msg.get("textBody", ""),
+                    "time": msg.get("received", "Unknown")
+                })
+            
+            return emails[:5]
+        except Exception as e:
+            logger.error(f"Email fetch failed: {e}")
+            return []
 # Ad system
 class AdSystem:
     def __init__(self):
