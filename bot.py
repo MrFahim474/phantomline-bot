@@ -22,9 +22,9 @@ ADMIN_ID = 5593343692  # Your admin ID
 
 # Adsterra popunder links - Replace with your actual links
 ADSTERRA_LINKS = [
-    "https://syndication.realsrv.com/splash.php?idzone=YOUR_ZONE_ID",
-    "https://www.profitablecpmrate.com/YOUR_CAMPAIGN_ID",
-    "https://ads.adsterra.com/click/YOUR_CLICK_ID"
+    "https://www.profitableratecpm.com/vyae9242?key=b7f39ee343b0a72625176c5f79bcd81b",
+    "https://www.profitableratecpm.com/wwur9vddps?key=6ac9c3ed993ad2a89a11603f8c27d528",
+    "https://www.profitableratecpm.com/p6rgdh07x?key=b2db689973484840de005ee95612c9f9"
 ]
 
 # Database initialization
@@ -783,10 +783,16 @@ async def show_inbox(query, email):
 
 # Copy functions
 async def copy_phone(query, number):
-    await query.answer(f"✅ Phone number copied!\n{number}", show_alert=True)
+    await query.answer(
+        text=f"✅ Copied: {number}\n\nPaste this in your app!",
+        show_alert=True
+    )
 
 async def copy_email(query, email):
-    await query.answer(f"✅ Email address copied!\n{email}", show_alert=True)
+    await query.answer(
+        text=f"✅ Copied: {email}\n\nPaste this in your website!",
+        show_alert=True
+    )
 
 # Bot statistics
 async def bot_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
