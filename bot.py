@@ -5,6 +5,8 @@ import asyncio
 import random
 import requests
 import re
+from bs4 import BeautifulSoup
+from tenacity import retry, stop_after_attempt, wait_fixed
 import json
 from datetime import datetime, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
