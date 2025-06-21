@@ -143,6 +143,7 @@ class RealPhoneAPI:
             return []
 
 # Real Email API integration
+
 class RealEmailAPI:
     def __init__(self):
         self.api_url = "https://10minutemail.com/address/api"
@@ -199,6 +200,7 @@ class RealEmailAPI:
         except Exception as e:
             logger.error(f"Email fetch failed: {e}")
             return []
+            
 # Ad system
 class AdSystem:
     def __init__(self):
