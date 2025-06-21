@@ -466,14 +466,22 @@ def save_user(update: Update):
     cursor = conn.cursor()
     
     cursor.execute('''
-        INSERT OR REPLACE INTO users (user_id, username, first_name, join_date, last_activity, ad_views, phone_requests, email_requests)
-        VALUES (?, ?, ?, ?, ?, 
-                COALESCE((SELECT ad_views FROM users WHERE user_id = ?), 0),
-                COALESCE((SELECT phone_requests FROM users WHERE user_id = ?), 0),
-                COALESCE((SELECT email_requests FROM users WHERE user_id = ?), 0))
-    ''', (user.id, user.username, user.first_name, 
-          datetime.now().isoformat(), datetime.now().isoformat(), 
-          user.id, user.id, user.id))
+        INSERT OR REPLACE INTO users 
+        (user_id, username, first_name, join_date, last_activity, ad_views, phone_requests, email_requests)
+        VALUES (
+            ?, ?, ?, 
+            COALESCE((SELECT join_date FROM users WHERE user_id = ?), ?),
+            ?, 
+            COALESCE((SELECT ad_views FROM users WHERE user_id = ?), 0),
+            COALESCE((SELECT phone_requests FROM users WHERE user_id = ?), 0),
+            COALESCE((SELECT email_requests FROM users WHERE user_id = ?), 0)
+        )
+    ''', (
+        user.id, user.username, user.first_name,
+        user.id, datetime.now().isoformat(),
+        datetime.now().isoformat(),
+        user.id, user.id, user.id
+    ))
     
     conn.commit()
     conn.close()
