@@ -1055,8 +1055,8 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "**Format:** `/report your problem description`\n\n"
             "**Examples:**\n"
             "• `/report USA number not receiving WhatsApp codes`\n"
-            "• `/report Email tempmail.org not working with Instagram`\n"
-            "• `/report Copy function doesn't work on iPhone`",
+            "• `/report Email not working with Instagram`\n"
+            "• `/report Copy function doesn't work`",
             parse_mode='Markdown'
         )
         return
@@ -1078,111 +1078,68 @@ async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
     conn.close()
     
-    # Send to admin (YOUR ID: 5593343692)
+    # Send to admin - FIXED VERSION
     try:
         admin_text = f"""
 🆘 **NEW SUPPORT TICKET #{ticket_id}**
 
 👤 **User Info:**
 • **Name:** {user.first_name or 'No name'}
-• **Username:** @{user.username or 'No username'}
-• **User ID:** `{user.id}`
+• **Username:** @{user.username or 'No username'}  
+• **User ID:** {user.id}
 
 📝 **Problem Report:**
+{message}
+
 🕐 **Time:** {timestamp.strftime('%Y-%m-%d %H:%M:%S')} UTC
 
 **Quick Response:**
-Reply with: `/reply {user.id} your response here`
+Reply: /reply {user.id} your response
 
 ---
 PhantomLine Support System
         """
         
+        # Send to your admin ID: 5593343692
         await context.bot.send_message(
-            chat_id=ADMIN_ID,
+            chat_id=5593343692,  # Your admin ID
             text=admin_text,
             parse_mode='Markdown'
         )
         
-        logger.info(f"Support ticket #{ticket_id} sent to admin {ADMIN_ID}")
+        # Also log it
+        logger.info(f"Support ticket #{ticket_id} sent to admin 5593343692")
         
-    except Exception as e:
-        logger.error(f"Failed to send admin notification: {e}")
-    
-    # Confirm to user
-    success_text = f"""
+        # Send confirmation to user
+        success_text = f"""
 ✅ **Support Request Sent Successfully!**
 
 🎫 **Ticket ID:** #{ticket_id}
 
 📝 **Your Message:**
-    ⏰ **What's Next:**
+{message}
+
+⏰ **What's Next:**
 • Our team will review your issue
-• You'll get a direct response within 2-4 hours
-• We'll message you in this chat
+• You'll get a response within 2-4 hours
+• We'll message you directly in this chat
 • Your ticket is being tracked
 
-📞 **Need immediate help?**
-Check our troubleshooting guide: /help
+📞 **Need immediate help?** Check /help
 
 🙏 **Thank you for helping us improve PhantomLine!**
-    """
-    
-    await update.message.reply_text(success_text, parse_mode='Markdown')
-
-# Admin reply system
-async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
-        return
-    
-    if len(context.args) < 2:
-        await update.message.reply_text(
-            "**Admin Reply Format:**\n"
-            "`/reply <user_id> <your message>`\n\n"
-            "**Example:**\n"
-            "`/reply 123456789 Hi! I've fixed the issue. Please try again.`",
-            parse_mode='Markdown'
-        )
-        return
-    
-    try:
-        user_id = int(context.args[0])
-        reply_message = ' '.join(context.args[1:])
-        
-        user_reply = f"""
-📞 **PhantomLine Support Response**
-
-👨‍💻 **Support Team:**
-
-{reply_message}
-
----
-
-📞 **Need more help?**
-• Send `/report` with your issue
-• Contact /support for guides
-• Check /help for instructions
-
-🙏 **Thank you for using PhantomLine!**
-
-*Response from PhantomLine Support Team*
         """
         
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=user_reply,
-            parse_mode='Markdown'
-        )
+        await update.message.reply_text(success_text, parse_mode='Markdown')
         
-        await update.message.reply_text(
-            f"✅ **Reply sent to user {user_id}**\n\n**Your message:**\n{reply_message}",
-            parse_mode='Markdown'
-        )
-        
-    except ValueError:
-        await update.message.reply_text("❌ Invalid user ID format.")
     except Exception as e:
-        await update.message.reply_text(f"❌ Error: {str(e)}")
+        logger.error(f"Failed to send admin notification: {e}")
+        # Still send confirmation to user
+        await update.message.reply_text(
+            f"✅ **Support request received!** (Ticket #{ticket_id})\n\n"
+            "We'll get back to you soon!",
+            parse_mode='Markdown'
+        )
 
 # Admin stats
 async def admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
