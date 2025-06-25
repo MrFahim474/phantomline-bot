@@ -1339,26 +1339,28 @@ def main():
     application.add_handler(CommandHandler("support", support_command))
     application.add_handler(CommandHandler("stats", bot_stats))
     application.add_handler(CommandHandler("report", report_command))
-    # === ADMIN REPLY SYSTEM ===
-@bot.message_handler(commands=['reply'])
-def admin_reply(message):
+    application.add_handler(CommandHandler("reply", admin_reply))
+    async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Only allow admin to reply
+    ADMIN_ID = 5593343692  # your admin user id
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("❌ You are not authorized to use this command.")
+        return
+    
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "Usage:\n/reply <user_id> <message>\n\nExample:\n/reply 123456789 Hello, your issue is fixed."
+        )
+        return
+    
+    user_id = context.args[0]
+    reply_message = ' '.join(context.args[1:])
+    
     try:
-        if message.from_user.id != ADMIN_ID:
-            bot.reply_to(message, "⛔️ Only the bot admin can use this command.")
-            return
-
-        parts = message.text.split(' ', 2)
-        if len(parts) < 3:
-            bot.reply_to(message, "❌ Usage: /reply <user_id> <message>")
-            return
-
-        user_id = int(parts[1])
-        reply_text = parts[2]
-        bot.send_message(user_id, f"📬 *Admin Reply:*\n\n{reply_text}", parse_mode="Markdown")
-        bot.reply_to(message, f"✅ Reply sent to user ID {user_id}.")
-
+        await context.bot.send_message(chat_id=int(user_id), text=reply_message)
+        await update.message.reply_text(f"✅ Message sent to user {user_id} successfully!")
     except Exception as e:
-        bot.reply_to(message, f"❌ Error sending reply: {e}")
+        await update.message.reply_text(f"❌ Failed to send message: {e}")
     
     application.add_handler(CommandHandler("admin", admin_stats))
     application.add_handler(CallbackQueryHandler(button_callback))
