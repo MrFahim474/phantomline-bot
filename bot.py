@@ -1340,25 +1340,31 @@ def main():
     application.add_handler(CommandHandler("stats", bot_stats))
     application.add_handler(CommandHandler("report", report_command))
     application.add_handler(CommandHandler("reply", admin_reply))
-    async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Only allow admin to reply
-    ADMIN_ID = 5593343692  # your admin user id
-    if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("❌ You are not authorized to use this command.")
-        return
-    
+    from telegram import Update
+from telegram.ext import ContextTypes
+
+async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(context.args) < 2:
         await update.message.reply_text(
-            "Usage:\n/reply <user_id> <message>\n\nExample:\n/reply 123456789 Hello, your issue is fixed."
+            "❌ **Wrong format.**\n\nUse this format:\n`/reply user_id your message`",
+            parse_mode='Markdown'
         )
         return
-    
-    user_id = context.args[0]
-    reply_message = ' '.join(context.args[1:])
-    
+
     try:
-        await context.bot.send_message(chat_id=int(user_id), text=reply_message)
-        await update.message.reply_text(f"✅ Message sent to user {user_id} successfully!")
+        user_id = int(context.args[0])
+        reply_message = ' '.join(context.args[1:])
+        
+        reply_text = f"""
+📞 **PhantomLine Support Response**
+
+{reply_message}
+        """
+        
+        # Send message to user
+        await context.bot.send_message(chat_id=user_id, text=reply_text, parse_mode='Markdown')
+        await update.message.reply_text("✅ Your message was sent to the user.")
+
     except Exception as e:
         await update.message.reply_text(f"❌ Failed to send message: {e}")
         
