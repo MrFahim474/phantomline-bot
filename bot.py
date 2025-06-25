@@ -1339,7 +1339,27 @@ def main():
     application.add_handler(CommandHandler("support", support_command))
     application.add_handler(CommandHandler("stats", bot_stats))
     application.add_handler(CommandHandler("report", report_command))
-    application.add_handler(CommandHandler("reply", admin_reply))
+    # === ADMIN REPLY SYSTEM ===
+@bot.message_handler(commands=['reply'])
+def admin_reply(message):
+    try:
+        if message.from_user.id != ADMIN_ID:
+            bot.reply_to(message, "⛔️ Only the bot admin can use this command.")
+            return
+
+        parts = message.text.split(' ', 2)
+        if len(parts) < 3:
+            bot.reply_to(message, "❌ Usage: /reply <user_id> <message>")
+            return
+
+        user_id = int(parts[1])
+        reply_text = parts[2]
+        bot.send_message(user_id, f"📬 *Admin Reply:*\n\n{reply_text}", parse_mode="Markdown")
+        bot.reply_to(message, f"✅ Reply sent to user ID {user_id}.")
+
+    except Exception as e:
+        bot.reply_to(message, f"❌ Error sending reply: {e}")
+    
     application.add_handler(CommandHandler("admin", admin_stats))
     application.add_handler(CallbackQueryHandler(button_callback))
     application.add_error_handler(error_handler)
