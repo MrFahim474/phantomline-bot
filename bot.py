@@ -1353,7 +1353,6 @@ async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Failed to send message: {e}")
 
 # Main function
-# ✅ CORRECT main function
 async def main():
     init_db()
     logger.info("Database initialized")
