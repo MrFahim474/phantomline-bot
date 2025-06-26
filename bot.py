@@ -1324,23 +1324,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
             )
         except:
             pass
-
-# Main function
-def main():
-    """Start the PhantomLine bot"""
-    init_db()
-    logger.info("Database initialized")
-    
-    application = Application.builder().token(BOT_TOKEN).build()
-    
-    # Add all handlers
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("help", help_command))
-    application.add_handler(CommandHandler("support", support_command))
-    application.add_handler(CommandHandler("stats", bot_stats))
-    application.add_handler(CommandHandler("report", report_command))
-    application.add_handler(CommandHandler("reply", admin_reply))
-    from telegram import Update
+            from telegram import Update
 from telegram.ext import ContextTypes
 
 async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1367,23 +1351,37 @@ async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         await update.message.reply_text(f"❌ Failed to send message: {e}")
-        
-    
+
+# Main function
+# ✅ CORRECT main function
+async def main():
+    init_db()
+    logger.info("Database initialized")
+
+    application = Application.builder().token(BOT_TOKEN).build()
+
+    # Add all handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("support", support_command))
+    application.add_handler(CommandHandler("stats", bot_stats))
+    application.add_handler(CommandHandler("report", report_command))
+    application.add_handler(CommandHandler("reply", admin_reply))
     application.add_handler(CommandHandler("admin", admin_stats))
     application.add_handler(CallbackQueryHandler(button_callback))
     application.add_error_handler(error_handler)
-    
+
     logger.info("🚀 PhantomLine Bot Started Successfully!")
     logger.info(f"📱 {sum(len(sms_service.get_numbers_by_country(c)) for c in sms_service.get_countries())} phone numbers ready")
     logger.info(f"📧 {len(email_service.email_providers)} email providers ready")
     logger.info("🎯 All systems operational!")
-    
-    # Start polling
-    application.run_polling(
+
+    await application.run_polling(
         allowed_updates=Update.ALL_TYPES,
         drop_pending_updates=True
     )
 
-if __name__ == '__main__':
-    main()
-    
+# ✅ Start the bot when running the file
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
