@@ -10,6 +10,33 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 import urllib.parse
 
+from telegram import Update
+from telegram.ext import ContextTypes
+
+async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if len(context.args) < 2:
+        await update.message.reply_text(
+            "❌ **Wrong format.**\n\nUse this format:\n`/reply user_id your message`",
+            parse_mode='Markdown'
+        )
+        return
+
+    try:
+        user_id = int(context.args[0])
+        reply_message = ' '.join(context.args[1:])
+
+        reply_text = f"""
+📞 **PhantomLine Support Response**
+
+{reply_message}
+        """
+
+        await context.bot.send_message(chat_id=user_id, text=reply_text, parse_mode='Markdown')
+        await update.message.reply_text("✅ Your message was sent to the user.")
+
+    except Exception as e:
+        await update.message.reply_text(f"❌ Failed to send message: {e}")
+
 # Configure logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -1324,41 +1351,15 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
             )
         except:
             pass
-            from telegram import Update
-from telegram.ext import ContextTypes
-
-async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if len(context.args) < 2:
-        await update.message.reply_text(
-            "❌ **Wrong format.**\n\nUse this format:\n`/reply user_id your message`",
-            parse_mode='Markdown'
-        )
-        return
-
-    try:
-        user_id = int(context.args[0])
-        reply_message = ' '.join(context.args[1:])
-        
-        reply_text = f"""
-📞 **PhantomLine Support Response**
-
-{reply_message}
-        """
-        
-        # Send message to user
-        await context.bot.send_message(chat_id=user_id, text=reply_text, parse_mode='Markdown')
-        await update.message.reply_text("✅ Your message was sent to the user.")
-
-    except Exception as e:
-        await update.message.reply_text(f"❌ Failed to send message: {e}")
-
+            
 # Main function
 async def main():
+    """Start the PhantomLine bot"""
     init_db()
     logger.info("Database initialized")
-
+    
     application = Application.builder().token(BOT_TOKEN).build()
-
+    
     # Add all handlers
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
@@ -1369,18 +1370,18 @@ async def main():
     application.add_handler(CommandHandler("admin", admin_stats))
     application.add_handler(CallbackQueryHandler(button_callback))
     application.add_error_handler(error_handler)
-
+    
     logger.info("🚀 PhantomLine Bot Started Successfully!")
     logger.info(f"📱 {sum(len(sms_service.get_numbers_by_country(c)) for c in sms_service.get_countries())} phone numbers ready")
     logger.info(f"📧 {len(email_service.email_providers)} email providers ready")
     logger.info("🎯 All systems operational!")
-
+    
+    # Start polling (IMPORTANT: must await)
     await application.run_polling(
         allowed_updates=Update.ALL_TYPES,
         drop_pending_updates=True
     )
-
-# ✅ Start the bot when running the file
-if __name__ == "__main__":
+if __name__ == '__main__':
     import asyncio
     asyncio.run(main())
+    
