@@ -86,330 +86,88 @@ def init_db():
     conn.close()
 
 # REAL SMS API - Gets actual verification codes
-import json
-from bs4 import BeautifulSoup
-import time
+
+import os
+import aiohttp
+import re
+
+TEXTBEE_API_KEY = os.getenv("TEXTBEE_API_KEY")  # Securely loaded from Railway
+
 class RealSMSService:
     def __init__(self):
-        # REAL working numbers from actual free SMS websites
         self.real_numbers = {
             'USA 🇺🇸': [
-                {'number': '+12092512708', 'display': '+1-209-251-2708', 'copy': '12092512708', 'source': 'receivesms.org'},
-                {'number': '+17753055499', 'display': '+1-775-305-5499', 'copy': '17753055499', 'source': 'quackr.io'},
-                {'number': '+15597418334', 'display': '+1-559-741-8334', 'copy': '15597418334', 'source': 'mobilesms.io'},
-                {'number': '+17027512608', 'display': '+1-702-751-2608', 'copy': '17027512608', 'source': 'freephonenum.com'},
-                {'number': '+17756786885', 'display': '+1-775-678-6885', 'copy': '17756786885', 'source': 'textbee.co'},
-                {'number': '+15163265479', 'display': '+1-516-326-5479', 'copy': '15163265479', 'source': 'textbee.co'},
-                {'number': '+19293361618', 'display': '+1-929-336-1618', 'copy': '19293361618', 'source': 'textbee.co'},
-                {'number': '+17605100067', 'display': '+1-760-510-0067', 'copy': '17605100067', 'source': 'textbee.co'}
-            ],
-            'UK 🇬🇧': [
-                {'number': '+447700150616', 'display': '+44-7700-150616', 'copy': '447700150616', 'source': 'receivesms.org'},
-                {'number': '+447700150655', 'display': '+44-7700-150655', 'copy': '447700150655', 'source': 'receivesms.org'},
-                {'number': '+447520635472', 'display': '+44-7520-635472', 'copy': '447520635472', 'source': 'quackr.io'}
-            ],
-            'Germany 🇩🇪': [
-                {'number': '+4915735983768', 'display': '+49-157-3598-3768', 'copy': '4915735983768', 'source': 'sms77.io'},
-                {'number': '+4915735998460', 'display': '+49-157-3599-8460', 'copy': '4915735998460', 'source': 'receive-sms.cc'},
-                {'number': '+4915202806842', 'display': '+49-152-0280-6842', 'copy': '4915202806842', 'source': 'receivesms.org'}
-            ],
-            'Canada 🇨🇦': [
-                {'number': '+15879846325', 'display': '+1-587-984-6325', 'copy': '15879846325', 'source': 'freephonenum.com'},
-                {'number': '+16138006493', 'display': '+1-613-800-6493', 'copy': '16138006493', 'source': 'receivesms.org'},
-                {'number': '+14388030648', 'display': '+1-438-803-0648', 'copy': '14388030648', 'source': 'quackr.io'}
-            ],
-            'France 🇫🇷': [
-                {'number': '+33757592041', 'display': '+33-7-57-59-20-41', 'copy': '33757592041', 'source': 'receivesms.org'},
-                {'number': '+33757598022', 'display': '+33-7-57-59-80-22', 'copy': '33757598022', 'source': 'receive-sms.cc'}
+                {
+                    'number': '+17756786885',
+                    'display': '+1-775-678-6885',
+                    'copy': '17756786885',
+                    'source': 'TextBee.dev'
+                },
+                {
+                    'number': '+15163265479',
+                    'display': '+1-516-326-5479',
+                    'copy': '15163265479',
+                    'source': 'TextBee.dev'
+                },
+                {
+                    'number': '+19293361618',
+                    'display': '+1-929-336-1618',
+                    'copy': '19293361618',
+                    'source': 'TextBee.dev'
+                }
             ]
         }
-    
+
     def get_countries(self):
+        """Returns list of supported countries."""
         return list(self.real_numbers.keys())
-    
+
     def get_numbers_by_country(self, country):
+        """Returns numbers for a given country."""
         return self.real_numbers.get(country, [])
-    
+
     async def get_verification_codes(self, number):
-        """Get REAL SMS from actual free SMS websites"""
+        """
+        Get real SMS codes from TextBee API
+        """
         try:
-            # Extract clean number
             clean_number = number.replace('+', '').replace('-', '').replace(' ', '')
-            
-            # Try multiple real SMS services
-            real_messages = []
-            
-            # Method 1: Scrape receivesms.org
-            real_messages.extend(await self._scrape_receivesms(clean_number))
-            
-            # Method 2: Scrape quackr.io  
-            real_messages.extend(await self._scrape_quackr(clean_number))
-            
-            # Method 3: Scrape mobilesms.io
-            real_messages.extend(await self._scrape_mobilesms(clean_number))
-            
-            # Method 4: Scrape freephonenum.com
-            real_messages.extend(await self._scrape_freephonenum(clean_number))
-            
-            # Method 5: Scrape textbee.co
-            real_messages.extend(await self._scrape_textbee(clean_number))
-            
-            # If we got real messages, return them
-            if real_messages:
-                return real_messages[:5]  # Return latest 5
-            
-            # If no real messages found, return empty (no fake codes)
-            return []
-            
-        except Exception as e:
-            logger.error(f"Error fetching real SMS: {e}")
-            return []
-    
-    async def _scrape_receivesms(self, clean_number):
-        """Scrape real SMS from receivesms.org"""
-        try:
-            url = f"https://www.receivesms.org/sms/{clean_number}/"
+            url = f"https://textbee.dev/api/v1/sms/{clean_number}"
+
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                "Authorization": f"Bearer {TEXTBEE_API_KEY}",
+                "Accept": "application/json"
             }
-            
-            response = requests.get(url, headers=headers, timeout=15)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.content, 'html.parser')
-                
-                messages = []
-                # Look for SMS message containers
-                sms_divs = soup.find_all('div', class_=['list-group-item', 'sms-item', 'message'])
-                
-                for div in sms_divs:
-                    text = div.get_text(strip=True)
-                    
-                    # Extract verification codes
-                    import re
-                    code_patterns = [
-                        r'code[:\s]+(\d{4,8})',
-                        r'verification[:\s]+(\d{4,8})',
-                        r'(\d{6})',
-                        r'(\d{5})',
-                        r'(\d{4})'
-                    ]
-                    
-                    for pattern in code_patterns:
-                        matches = re.findall(pattern, text, re.IGNORECASE)
-                        if matches:
-                            code = matches[0]
-                            service = 'WhatsApp' if 'whatsapp' in text.lower() else 'SMS'
-                            
-                            messages.append({
-                                'service': service,
-                                'code': code,
-                                'message': text,
-                                'time': 'Just now',
-                                'source': 'receivesms.org'
-                            })
-                            break
-                
-                return messages[:3]  # Return up to 3 messages
-                
-        except Exception as e:
-            logger.error(f"Error scraping receivesms: {e}")
-            return []
-    
-    async def _scrape_quackr(self, clean_number):
-        """Scrape real SMS from quackr.io"""
-        try:
-            url = f"https://quackr.io/temporary-numbers/united-states/{clean_number}"
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-            
-            response = requests.get(url, headers=headers, timeout=15)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.content, 'html.parser')
-                
-                messages = []
-                # Look for message elements
-                message_elements = soup.find_all(['div', 'p'], class_=['sms', 'message', 'text'])
-                
-                for element in message_elements:
-                    text = element.get_text(strip=True)
-                    
-                    # Look for verification codes
-                    import re
-                    if any(keyword in text.lower() for keyword in ['code', 'verification', 'confirm']):
-                        code_match = re.search(r'\b\d{4,8}\b', text)
-                        if code_match:
-                            code = code_match.group()
-                            service = 'Telegram' if 'telegram' in text.lower() else 'Verification'
-                            
-                            messages.append({
-                                'service': service,
-                                'code': code,
-                                'message': text,
-                                'time': '1 min ago',
-                                'source': 'quackr.io'
-                            })
-                
-                return messages[:2]
-                
-        except Exception as e:
-            logger.error(f"Error scraping quackr: {e}")
-            return []
-    
-    async def _scrape_mobilesms(self, clean_number):
-        """Scrape real SMS from mobilesms.io"""
-        try:
-            url = f"https://mobilesms.io/free-sms-verification/{clean_number}"
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15'
-            }
-            
-            response = requests.get(url, headers=headers, timeout=15)
-            if response.status_code == 200:
-                content = response.text
-                
-                messages = []
-                # Simple text search for verification patterns
-                import re
-                
-                # Look for common verification patterns
-                patterns = [
-                    r'WhatsApp code: (\d{6})',
-                    r'Google verification code is (\d{6})',
-                    r'Instagram code: (\d{6})',
-                    r'verification code[:\s]+(\d{4,8})',
-                    r'code[:\s]+(\d{4,8})'
-                ]
-                
-                for pattern in patterns:
-                    matches = re.finditer(pattern, content, re.IGNORECASE)
-                    for match in matches:
-                        code = match.group(1)
-                        service = 'Google' if 'google' in match.group(0).lower() else 'SMS'
-                        
-                        messages.append({
-                            'service': service,
-                            'code': code,
-                            'message': match.group(0),
-                            'time': '2 min ago',
-                            'source': 'mobilesms.io'
-                        })
-                
-                return messages[:2]
-                
-        except Exception as e:
-            logger.error(f"Error scraping mobilesms: {e}")
-            return []
-    
-    async def _scrape_freephonenum(self, clean_number):
-        """Scrape real SMS from freephonenum.com"""
-        try:
-            url = f"https://freephonenum.com/us/sms/{clean_number}"
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-            }
-            
-            response = requests.get(url, headers=headers, timeout=15)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.content, 'html.parser')
-                
-                messages = []
-                # Look for SMS containers
-                sms_containers = soup.find_all(['tr', 'div'], class_=['sms-item', 'message-row'])
-                
-                for container in sms_containers:
-                    text = container.get_text(strip=True)
-                    
-                    # Extract codes
-                    import re
-                    if 'verification' in text.lower() or 'code' in text.lower():
-                        code_match = re.search(r'\b\d{4,8}\b', text)
-                        if code_match:
-                            code = code_match.group()
-                            service = 'Facebook' if 'facebook' in text.lower() else 'Verification'
-                            
-                            messages.append({
-                                'service': service,
-                                'code': code,
-                                'message': text,
-                                'time': '3 min ago',
-                                'source': 'freephonenum.com'
-                            })
-                
-                return messages[:2]
-                
-        except Exception as e:
-            logger.error(f"Error scraping freephonenum: {e}")
-            return []
-    
-    async def _scrape_textbee(self, clean_number):
-        """Scrape real SMS from textbee.co"""
-        try:
-            url = f"https://textbee.co/api/v1/sms/{clean_number}"
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'application/json'
-            }
-            
-            response = requests.get(url, headers=headers, timeout=15)
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                    messages = []
-                    
-                    if 'messages' in data:
-                        for msg in data['messages'][:3]:  # Get latest 3
-                            text = msg.get('message', '')
-                            sender = msg.get('sender', 'Unknown')
-                            
-                            # Extract verification code
-                            import re
-                            code_match = re.search(r'\b\d{4,8}\b', text)
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, headers=headers, timeout=15) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        messages = []
+
+                        for msg in data.get("messages", []):
+                            text = msg.get("message", "")
+                            sender = msg.get("sender", "Unknown")
+                            time_sent = msg.get("time", "Just now")
+
+                            code_match = re.search(r"\b\d{4,8}\b", text)
                             if code_match:
-                                code = code_match.group()
-                                service = sender if sender != 'Unknown' else 'SMS'
-                                
                                 messages.append({
-                                    'service': service,
-                                    'code': code,
-                                    'message': text,
-                                    'time': 'Just now',
-                                    'source': 'textbee.co'
+                                    "service": sender,
+                                    "code": code_match.group(),
+                                    "message": text,
+                                    "time": time_sent,
+                                    "source": "TextBee.dev"
                                 })
-                    
-                    return messages
-                    
-                except json.JSONDecodeError:
-                    # If not JSON, try HTML parsing
-                    soup = BeautifulSoup(response.content, 'html.parser')
-                    messages = []
-                    
-                    # Look for verification codes in HTML
-                    text_content = soup.get_text()
-                    import re
-                    
-                    code_patterns = [
-                        r'(\d{6})\s*(?:is your|verification)',
-                        r'verification code[:\s]+(\d{4,8})',
-                        r'code[:\s]+(\d{4,8})'
-                    ]
-                    
-                    for pattern in code_patterns:
-                        matches = re.findall(pattern, text_content, re.IGNORECASE)
-                        for code in matches:
-                            messages.append({
-                                'service': 'Textbee',
-                                'code': code,
-                                'message': f'Verification code: {code}',
-                                'time': 'Just now',
-                                'source': 'textbee.co'
-                            })
-                    
-                    return messages[:2]
-                
+
+                        return messages[:5]
+                    else:
+                        print(f"❌ Error: {response.status} from TextBee API")
+                        return []
         except Exception as e:
-            logger.error(f"Error scraping textbee: {e}")
+            print(f"⚠️ Error fetching from TextBee: {e}")
             return []
+
 
 # REAL Email Service - Gets actual verification emails
 class RealEmailService:
