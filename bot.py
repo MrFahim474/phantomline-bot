@@ -480,59 +480,82 @@ WhatsApp • Telegram • Instagram • Facebook • Google • Apple • Discor
     await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
 
 # Check SMS messages
+import asyncio
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ContextTypes
+
+sms_service = RealSMSService()  # Make sure this is defined globally
+
 async def check_sms_messages(query, country, number_index):
     numbers = sms_service.get_numbers_by_country(country)
+
+    if number_index >= len(numbers):
+        await query.edit_message_text("❌ Number not found!")
+        return
+
     number_data = numbers[number_index]
     display_number = number_data['display']
     copy_number = number_data['copy']
-    
-    # Show realistic loading
-    loading_text = "🔄 **Fetching your REAL SMS messages...**\n\n📡 Connecting to SMS servers...\n📱 Checking verification codes...\n⏳ Please wait..."
+    real_number = number_data['number']  # for API call
+
+    # Loading message while waiting
+    loading_text = f"""
+🔄 **Fetching REAL SMS from APIs...**
+
+📡 **Connecting to:**
+• TextBee API
+• (Planned: SMS-Activate.org, 5Sim.net, SMS-Man)
+
+📱 **Checking number:** `{display_number}`
+⏳ Please wait 3-5 seconds...
+    """
     await query.edit_message_text(loading_text, parse_mode='Markdown')
-    
-    # Realistic loading time
-    await asyncio.sleep(3)
-    
-    # Get verification codes
-    messages = await sms_service.get_verification_codes(number_data['number'])
-    
+    await asyncio.sleep(4)
+
+    # Fetch real SMS messages from TextBee
+    messages = await sms_service.get_verification_codes(real_number)
+
     if not messages:
         text = f"""
 📭 **No SMS received yet**
 
 📞 **Number:** `{display_number}`
+🔗 **APIs checked:** TextBee
 
-⏳ **Waiting for verification codes...**
+⏳ **What’s happening:**
+• APIs are watching this number
+• Verification codes may arrive within 1–2 minutes
+• Make sure you entered the correct number: `{copy_number}`
+• Request the code from your app/website
+• Then click refresh below
 
-💡 **Make sure you:**
-• Used the correct number: `{copy_number}`
-• Requested SMS from your app/website
-• Wait 1-2 minutes for delivery
-• Some services may take up to 5 minutes
-
-🔄 **SMS messages appear here automatically!**
+🔄 **Messages will appear here once received**
         """
     else:
-        text = f"📨 **REAL SMS Messages for {display_number}**\n\n"
-        text += f"✅ **{len(messages)} verification codes received:**\n\n"
-        
+        text = f"📨 **REAL SMS for `{display_number}`**\n\n"
+        text += f"✅ **{len(messages)} verification code(s) received:**\n\n"
+
         for i, sms in enumerate(messages, 1):
-            text += f"📩 **Message {i} - {sms['service']}**\n"
-            text += f"🔢 **Verification Code:** `{sms['code']}`\n"
-            text += f"📝 **Full SMS:** {sms['message']}\n"
-            text += f"🕐 **Received:** {sms['time']}\n"
-            text += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        
-        text += "✨ **Copy any verification code above and paste it in your app!**\n"
-        text += "🔄 **More codes will appear here automatically as they arrive.**"
-    
+            text += (
+                f"📩 **Message {i}**\n"
+                f"🔢 *Code:* `{sms['code']}`\n"
+                f"📝 *Message:* {sms['message']}\n"
+                f"📡 *Source:* {sms['source']}\n"
+                f"🕐 *Time:* {sms['time']}\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            )
+
+        text += "⚡ *These are 100% REAL verification codes from actual SMS APIs.*"
+
+    # Buttons
     keyboard = [
-        [InlineKeyboardButton("🔄 Refresh SMS", callback_data=f"check_sms_{country}_{number_index}")],
+        [InlineKeyboardButton("🔄 Refresh Real SMS", callback_data=f"check_sms_{country}_{number_index}")],
         [InlineKeyboardButton("🔙 Back to Number", callback_data=f"use_phone_{country}_{number_index}")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
+
     await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
+
 
 # Get temporary email
 async def get_temp_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
