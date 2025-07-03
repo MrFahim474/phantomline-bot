@@ -1427,7 +1427,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
             
 # Main function
 def main():
-    """Start the PhantomLine bot (synchronous wrapper for async setup)."""
+    """Start the PhantomLine bot"""
     init_db()
     logger.info("Database initialized")
     
@@ -1446,14 +1446,14 @@ def main():
     
     logger.info("🚀 PhantomLine Bot Started Successfully!")
     logger.info(f"📱 {sum(len(sms_service.get_numbers_by_country(c)) for c in sms_service.get_countries())} phone numbers ready")
-    logger.info(f"📧 {len(email_service.email_providers)} email providers ready")
+    logger.info("📧 Professional email APIs ready")
     logger.info("🎯 All systems operational!")
     
-    # Start polling (synchronous call)
+    # Start polling
     application.run_polling(
         allowed_updates=Update.ALL_TYPES,
         drop_pending_updates=True
     )
 
 if __name__ == '__main__':
-    main()  # No asyncio.run() needed
+    main()
